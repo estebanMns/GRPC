@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package rutaviva.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ---------- Mensajes ----------
+message Coordenada {
+  double latitud  = 1;
+  double longitud = 2;
+}
+
+message Posicion {
+  string bus_id = 1;
+  Coordenada coordenada = 2;
+  float velocidad_kmh = 3;
+  google.protobuf.Timestamp registrada_en = 4;
+}
+
+message BusRequest { string bus_id = 1; }
+
+message Bus {
+  string bus_id = 1;
+  string placa = 2;
+  string ruta = 3;
+  string conductor = 4;
+  EstadoBus estado = 5;
+}
+
+enum EstadoBus {
+  ESTADO_BUS_DESCONOCIDO = 0;
+  EN_RUTA = 1;
+  EN_TERMINAL = 2;
+  FUERA_DE_SERVICIO = 3;
+}
+
+message ResumenRecorrido {
+  string bus_id = 1;
+  int32 puntos_recibidos = 2;
+  double distancia_km = 3;
+  float velocidad_promedio_kmh = 4;
+}
+
+message MensajeChat {
+  string remitente = 1;   // "conductor" o "central"
+  string bus_id = 2;
+  string texto = 3;
+  google.protobuf.Timestamp enviado_en = 4;
+}
+
+message ListarRutasRequest {}
+message Ruta { string codigo = 1; string origen = 2; string destino = 3; }
+message ListarRutasResponse { repeated Ruta rutas = 1; }
+
+// ---------- Servicio ----------
+service FlotaService {
+  // RF1 - Unaria
+  rpc ObtenerBus (BusRequest) returns (Bus);
+
+  // RF5 - Unaria
+  rpc ListarRutas (ListarRutasRequest) returns (ListarRutasResponse);
+
+  // RF2 - Server streaming: el pasajero sigue un bus en vivo
+  rpc SeguirBus (BusRequest) returns (stream Posicion);
+
+  // RF3 - Client streaming: el bus envía su GPS en lote
+  rpc ReportarUbicaciones (stream Posicion) returns (ResumenRecorrido);
+
+  // RF4 - Bidireccional: chat conductor <-> central
+  rpc Chat (stream MensajeChat) returns (stream MensajeChat);
+}
